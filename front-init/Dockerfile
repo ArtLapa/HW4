@@ -1,4 +1,4 @@
-FROM python:3.8
+FROM python:3.11
 
 WORKDIR /app
 
@@ -10,3 +10,4 @@ EXPOSE 3000
 EXPOSE 5000
 
 CMD ["python", "project.py"]
+
