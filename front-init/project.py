@@ -3,8 +3,11 @@ import socketserver
 from urllib.parse import urlparse, parse_qs
 import json
 from datetime import datetime
+import socket
+import threading
 
 PORT = 3000
+SOCKET_PORT = 5000
 
 class MyHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
@@ -13,7 +16,8 @@ class MyHandler(http.server.SimpleHTTPRequestHandler):
         if parsed_url.path == '/':
             self.send_response(200)
             self.end_headers()
-            self.wfile.write(b'Hello, World!')
+            with open('index.html', 'rb') as file:
+                self.wfile.write(file.read())
         elif parsed_url.path == '/message':
             self.send_response(200)
             self.end_headers()
@@ -44,8 +48,26 @@ class MyHandler(http.server.SimpleHTTPRequestHandler):
         self.send_header('Location', '/')
         self.end_headers()
 
+def socket_server():
+    server = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    server.bind(('localhost', SOCKET_PORT))
+
+    while True:
+        data, addr = server.recvfrom(1024)
+        message_dict = json.loads(data.decode())
+
+        # Save to data.json
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S.%f")
+        with open('storage/data.json', 'a') as file:
+            json.dump({timestamp: message_dict}, file)
+            file.write('\n')
+
 if __name__ == "__main__":
+    # Start socket server in a separate thread
+    socket_thread = threading.Thread(target=socket_server)
+    socket_thread.start()
+
+    # Start custom web server
     with socketserver.TCPServer(("", PORT), MyHandler) as httpd:
         print("Serving at port", PORT)
         httpd.serve_forever()
-
